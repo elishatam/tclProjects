@@ -1,13 +1,20 @@
 #BatchReProcess.tcl
 
+
+
 global verbose
 set verbose 1
 
+
+#Name: put {str}
+#Summary: Output message into tk message box
+#Args: string (Example: "panelx")
+#Return: None
 proc put {str} {
-	global verbose
-	if {$verbose} {
-		tk_messageBox -message $str
-	}
+    global verbose
+    if {$verbose} {
+        tk_messageBox -message $str
+    }
 }
 
 
@@ -23,10 +30,11 @@ pack  .top.statuslabel .top.status -side left
 update
 
 proc writelog {logfile msg} {
+   #RDWR - open file for both reading and writing
    set Log [open $logfile {RDWR APPEND CREAT} ]
    if { $Log == "" } { put "ERROR OPENING $Log"; exit }
-   puts $Log  $msg 
-   # puts $Log \n
+   puts $Log  $msg ;#Append msg to $Log
+   # puts $Log \n  ;#Append newline
    close $Log
 }
 
@@ -65,61 +73,68 @@ D09S20-0404
 }
 
 set counter 0
+#foreach varlist list body
 foreach panelid $panelList {
 
-	incr counter
-	set statustext "$panelid   No. $counter  of [llength $panelList]"
-	update
-	
-	set msg $counter
-	append msg \t $panelid
-	
-	set netdatafolder [file join $datasrcDir1 "[string range $panelid 0 0]---"  "[string range $panelid 0 1]--" $panelid "glass"]
+    incr counter
+    set statustext "$panelid   No. $counter  of [llength $panelList]"
+    update
+    
+    set msg $counter
+    append msg \t $panelid
+    
+    #add to path to create new folder based on panelid C48S17-0103
+    #Add directory with 1st letter of panelid (C---)
+    #Add directory with 2nd letter of panelid (4--)
+    #Add directory with panelid (C48S17-0103)
+    #Add directory with "glass" (glass)
+    # C:/Users/el991109/Documents/git/tclProjects/C---/C4--/C48S17-0103/glass
+    set netdatafolder [file join $datasrcDir1 "[string range $panelid 0 0]---"  "[string range $panelid 0 1]--" $panelid "glass"]
 
-	# tk_messageBox -message $netdatafolder
-	
-			if {[file isdirectory $netdatafolder]==0} {
-					append msg \t "No_Folder"
-					writelog $logFile $msg
-					continue
-			}
-	
-		
-	
-	set filelist ""	
-	catch {set filelist [glob -directory  $netdatafolder *-D2-*-Dark*.viv]}
-		
-	# tk_messageBox -message [lindex $filelist 0]
-	
-	if {[llength $filelist]==0} {
-		append msg \t "No_Image"
-		writelog $logFile $msg	
-		continue
-		}
-	set filesrc [lindex $filelist 0]
-	
-	set imgname [file tail $filesrc]	
-	
-	set filetarget [file join $targetDir $imgname]
-	
-	
-	
-				if {[file exists $filetarget]>0 } {
-					append msg \t "Image Exists"
-					writelog $logFile $msg
-					continue
-				}		
+    # tk_messageBox -message $netdatafolder
+    
+            if {[file isdirectory $netdatafolder]==0} {
+                    append msg \t "No_Folder"
+                    writelog $logFile $msg
+                    continue
+            }
+    
+        
+    #save any file with D2*Dark*.viv name into filelist
+    set filelist "" 
+    catch {set filelist [glob -directory  $netdatafolder *-D2-*-Dark*.viv]}
+        
+    # tk_messageBox -message [lindex $filelist 0]
+    
+    if {[llength $filelist]==0} {
+        append msg \t "No_Image"  ;#No dark images in this panelid glass directory
+        writelog $logFile $msg  
+        continue ;#Skip remaining for loop instructions and go to next index
+        }
+    set filesrc [lindex $filelist 0]  ;#Put index 0 file into filesrc
+    
+    set imgname [file tail $filesrc]  ;#Ignore beginning path stuff. 
+                                       #Just get the last value = image name "*-D2-*-Dark*.viv"
+    
+    #filetarget = D:\Data\LC04\Dark_Images\-D2-*-Dark*.viv
+    set filetarget [file join $targetDir $imgname]
+
+                if {[file exists $filetarget]>0 } {
+                    append msg \t "Image Exists"
+                    writelog $logFile $msg
+                    continue ;  #Skip remaining for loop instructions and go to next index
+                }       
 
 
-	
-	if [catch {file copy -force $filesrc $filetarget}] {
-			append msg \t "Copy_Failed"
-			writelog $logFile $msg
-			continue
-	}
-	
-	append msg \t "Complete"
-	writelog $logFile $msg
+    #Copy filesrc to filetarget. Existing files will be overwritten    
+    if [catch {file copy -force $filesrc $filetarget}] {
+            append msg \t "Copy_Failed"
+            writelog $logFile $msg
+            continue
+    }
+    
+    append msg \t "Complete"
+    writelog $logFile $msg
 
 }
 
